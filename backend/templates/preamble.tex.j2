@@ -1,0 +1,33 @@
+\documentclass[a4paper, 11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[<< babel_lang >>]{babel}
+\usepackage{nicefrac}
+\usepackage[nowarnings,myconfig]{xcookybooky}
+\DeclareRobustCommand{\textcelcius}{\ensuremath{^{\circ}\mathrm{C}}\hspace{0.3em}}
+\setcounter{secnumdepth}{1}
+\renewcommand*{\recipesection}[2][]{\subsection[#1]{#2}}
+\renewcommand{\subsectionmark}[1]{}
+\usepackage{hyperref}
+\hypersetup{%
+pdfauthor={<< pdf_author >>},
+pdftitle={<< pdf_title >>},
+pdfsubject={Rezept},
+pdfkeywords={Rezept Kochbuch xcookybooky LaTeX, Recipe},
+pdfstartview={FitV},
+pdfview={FitH},
+pdfpagemode={UseNone},
+bookmarksopen={true},
+colorlinks={true},
+linkcolor={black},
+urlcolor={blue},
+citecolor={black},
+filecolor={black}
+}
+\hbadness=10000
+\setlength{\headsep}{0.5cm}
+\setlength{\footskip}{14pt}
+\setlength{\topmargin}{-1cm} \setlength{\textheight}{25.5cm}
+\renewcommand{\step}{\stepcounter{step}\lettrine[lines=2,lhang=0,loversize=0.15,slope=0em,findent=1em,nindent=0em]{\thestep}{}}

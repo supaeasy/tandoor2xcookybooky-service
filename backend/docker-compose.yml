@@ -1,0 +1,13 @@
+services:
+  tandoor2xcookybooky:
+    build: .
+    image: tandoor2xcookybooky-service:latest
+    container_name: tandoor2xcookybooky
+    restart: unless-stopped
+    ports:
+      - "8123:8080"
+    environment:
+      # Shown as "pdfauthor" in generated PDFs.
+      LATEX_PDF_AUTHOR: "Tandoor"
+      # babel language for hyphenation/headers, e.g. ngerman, nswissgerman, english
+      LATEX_BABEL_LANG: "nswissgerman"

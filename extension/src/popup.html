@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tandoor zu PDF</title>
+    <style>
+      body { font-family: system-ui, sans-serif; width: 280px; padding: 12px; }
+      h3 { margin: 0 0 10px; font-size: 1em; }
+      button { width: 100%; padding: 8px; cursor: pointer; margin-bottom: 8px; }
+      #status { font-size: 0.85em; color: #444; min-height: 1.2em; }
+      #configHint { font-size: 0.85em; color: #b00; }
+      a { color: #06c; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <h3>Tandoor zu PDF</h3>
+    <div id="unconfigured" style="display:none">
+      <p id="configHint">Bitte zuerst <a id="openOptions">Einstellungen</a> ausfüllen.</p>
+    </div>
+    <div id="configured" style="display:none">
+      <button id="downloadAll">📚 Alle Rezepte als PDF</button>
+      <div id="status"></div>
+      <p><a id="openOptions2">Einstellungen ändern</a></p>
+    </div>
+
+    <script src="settings.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
