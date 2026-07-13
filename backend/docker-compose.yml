@@ -1,7 +1,6 @@
 services:
   tandoor2xcookybooky:
     build: .
-    image: tandoor2xcookybooky-service:latest
     container_name: tandoor2xcookybooky
     restart: unless-stopped
     ports:
