@@ -36,7 +36,7 @@ async function requestRecipePdf(backendUrl, host, token, recipeId) {
   });
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Server-Fehler (${response.status}): ${detail.slice(0, 500)}`);
+    throw new Error(`Server-Fehler (${response.status}): ${detail.slice(-2000)}`);
   }
   return await response.blob();
 }
@@ -49,7 +49,7 @@ async function requestAllRecipesPdf(backendUrl, host, token) {
   });
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Server-Fehler (${response.status}): ${detail.slice(0, 500)}`);
+    throw new Error(`Server-Fehler (${response.status}): ${detail.slice(-2000)}`);
   }
   return await response.blob();
 }
