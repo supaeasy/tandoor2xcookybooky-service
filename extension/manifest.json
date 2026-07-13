@@ -3,11 +3,14 @@
   "name": "Tandoor zu PDF (xcookybooky)",
   "version": "1.0.0",
   "description": "Erzeugt aus Tandoor-Rezepten hübsche PDFs via xcookybooky (LaTeX), einzeln oder gesammelt.",
-  "permissions": ["storage", "scripting"],
+  "permissions": ["storage", "scripting", "downloads"],
   "optional_host_permissions": ["*://*/*"],
   "action": {
     "default_popup": "src/popup.html",
     "default_title": "Tandoor zu PDF"
   },
-  "options_page": "src/options.html"
+  "options_page": "src/options.html",
+  "background": {
+    "service_worker": "src/background.js"
+  }
 }

@@ -95,21 +95,6 @@ function describeJobStatus(job) {
   }
 }
 
-async function requestAllRecipesPdf(backendUrl, host, token, onProgress) {
-  const jobId = await startAllRecipesJob(backendUrl, host, token);
-  for (;;) {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    const job = await getJobStatus(backendUrl, jobId);
-    if (onProgress) onProgress(job, describeJobStatus(job));
-    if (job.status === "done") {
-      return await downloadJobPdf(backendUrl, jobId);
-    }
-    if (job.status === "error") {
-      throw new Error(job.detail);
-    }
-  }
-}
-
 function triggerBlobDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

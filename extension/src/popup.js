@@ -1,3 +1,13 @@
+const STATE_KEY = "tandoor2pdf_job_state";
+const IDLE_STATUSES = new Set(["idle", "finished", "error", undefined]);
+
+function renderState(state) {
+  const button = document.getElementById("downloadAll");
+  const status = document.getElementById("status");
+  status.textContent = state?.text || "";
+  button.disabled = !IDLE_STATUSES.has(state?.status);
+}
+
 async function init() {
   const settings = await getSettings();
   const configured = settings.tandoorHost && settings.tandoorToken && settings.backendUrl;
@@ -11,27 +21,20 @@ async function init() {
 
   if (!configured) return;
 
+  const initialState = await chrome.runtime.sendMessage({ type: "get-job-state" });
+  renderState(initialState);
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "session" && changes[STATE_KEY]) {
+      renderState(changes[STATE_KEY].newValue);
+    }
+  });
+
   document.getElementById("downloadAll").addEventListener("click", async () => {
-    const button = document.getElementById("downloadAll");
-    const status = document.getElementById("status");
-    button.disabled = true;
-    status.textContent = "Starte …";
-    try {
-      const blob = await requestAllRecipesPdf(
-        settings.backendUrl,
-        settings.tandoorHost,
-        settings.tandoorToken,
-        (job, text) => {
-          status.textContent = text;
-        }
-      );
-      triggerBlobDownload(blob, "Rezeptsammlung.pdf");
-      status.textContent = "Fertig!";
-    } catch (err) {
-      console.error("Tandoor2xcookybooky:", err);
-      status.textContent = `Fehler: ${err.message}`;
-    } finally {
-      button.disabled = false;
+    renderState({ status: "starting", text: "Starte …" });
+    const response = await chrome.runtime.sendMessage({ type: "start-all-recipes", settings });
+    if (!response?.started) {
+      renderState({ status: "error", text: "Es läuft bereits ein Sammel-PDF-Job." });
     }
   });
 }
