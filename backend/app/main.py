@@ -4,6 +4,8 @@ import re
 import shutil
 import sys
 import tempfile
+import threading
+import uuid
 from urllib.parse import quote
 
 from fastapi import Body, FastAPI, HTTPException
@@ -101,48 +103,105 @@ def get_recipe_pdf(recipe_id: int, payload: dict = Body(...)):
     )
 
 
-@app.post("/api/recipes/all")
-def get_all_recipes_pdf(payload: dict = Body(...)):
+# In-memory job tracking for the (potentially long-running) collected PDF
+# build, so the extension can poll for progress instead of just waiting on
+# one blocking request. Fine for a single-container, personal-use service.
+JOBS: dict[str, dict] = {}
+JOBS_LOCK = threading.Lock()
+
+
+def _set_job(job_id: str, **fields) -> None:
+    with JOBS_LOCK:
+        JOBS.setdefault(job_id, {}).update(fields)
+
+
+def _run_all_recipes_job(job_id: str, host: str, token: str) -> None:
+    try:
+        _set_job(job_id, status="fetching_list", current=0, total=0)
+        logger.info("Job %s: fetching recipe list from %s", job_id, host)
+        client = TandoorClient(host, token)
+        recipe_ids = client.fetch_all_recipe_ids()
+        if not recipe_ids:
+            _set_job(job_id, status="error", detail="No recipes found on this Tandoor instance.")
+            return
+        logger.info("Job %s: %d recipes found", job_id, len(recipe_ids))
+        _set_job(job_id, status="fetching", total=len(recipe_ids))
+
+        work_dir = tempfile.mkdtemp(prefix="tandoor_book_")
+        pictures_dir = os.path.join(work_dir, "Pictures")
+        os.makedirs(pictures_dir, exist_ok=True)
+        shutil.copy(CFG_PATH, work_dir)
+
+        tex_parts = [
+            render.render_preamble(BABEL_LANG, PDF_AUTHOR, "Rezeptsammlung"),
+            render.render_document_start(),
+            "\\tableofcontents\n\\clearpage",
+        ]
+        for index, recipe_id in enumerate(recipe_ids, start=1):
+            logger.info("Job %s: fetching recipe %d/%d (id=%s)", job_id, index, len(recipe_ids), recipe_id)
+            _set_job(job_id, current=index)
+            recipe = _prepare_recipe(client, recipe_id, work_dir, pictures_dir)
+            tex_parts.append(render.render_recipe_fragment(recipe))
+            tex_parts.append("\\clearpage")
+        tex_parts.append(render.render_document_end())
+
+        tex_filename = "cookbook.tex"
+        with open(os.path.join(work_dir, tex_filename), "w", encoding="utf-8") as f:
+            f.write("\n".join(tex_parts))
+
+        logger.info("Job %s: compiling %d recipes", job_id, len(recipe_ids))
+        _set_job(job_id, status="compiling")
+        pdf_path = compile_tex(work_dir, tex_filename, timeout=900)
+        logger.info("Job %s: done", job_id)
+        _set_job(job_id, status="done", pdf_path=pdf_path, work_dir=work_dir)
+    except HTTPException as exc:
+        logger.error("Job %s failed: %s", job_id, exc.detail)
+        _set_job(job_id, status="error", detail=str(exc.detail))
+    except Exception as exc:  # noqa: BLE001 - report any failure back to the client
+        logger.exception("Job %s failed", job_id)
+        _set_job(job_id, status="error", detail=str(exc))
+
+
+@app.post("/api/recipes/all/start")
+def start_all_recipes_job(payload: dict = Body(...)):
     host = payload.get("host")
     token = payload.get("token")
     if not host or not token:
         raise HTTPException(status_code=400, detail="host and token are required.")
 
-    logger.info("Collected PDF: fetching recipe list from %s", host)
-    client = TandoorClient(host, token)
-    recipe_ids = client.fetch_all_recipe_ids()
-    if not recipe_ids:
-        raise HTTPException(status_code=404, detail="No recipes found on this Tandoor instance.")
-    logger.info("Collected PDF: %d recipes found", len(recipe_ids))
+    job_id = uuid.uuid4().hex
+    _set_job(job_id, status="queued", current=0, total=0)
+    thread = threading.Thread(target=_run_all_recipes_job, args=(job_id, host, token), daemon=True)
+    thread.start()
+    return {"job_id": job_id}
 
-    work_dir = tempfile.mkdtemp(prefix="tandoor_book_")
-    pictures_dir = os.path.join(work_dir, "Pictures")
-    os.makedirs(pictures_dir, exist_ok=True)
-    shutil.copy(CFG_PATH, work_dir)
 
-    tex_parts = [
-        render.render_preamble(BABEL_LANG, PDF_AUTHOR, "Rezeptsammlung"),
-        render.render_document_start(),
-        "\\tableofcontents\n\\clearpage",
-    ]
-    for index, recipe_id in enumerate(recipe_ids, start=1):
-        logger.info("Collected PDF: fetching recipe %d/%d (id=%s)", index, len(recipe_ids), recipe_id)
-        recipe = _prepare_recipe(client, recipe_id, work_dir, pictures_dir)
-        tex_parts.append(render.render_recipe_fragment(recipe))
-        tex_parts.append("\\clearpage")
-    tex_parts.append(render.render_document_end())
+@app.get("/api/jobs/{job_id}")
+def get_job_status(job_id: str):
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Unknown job id.")
+        return {k: v for k, v in job.items() if k not in ("pdf_path", "work_dir")}
 
-    tex_filename = "cookbook.tex"
-    with open(os.path.join(work_dir, tex_filename), "w", encoding="utf-8") as f:
-        f.write("\n".join(tex_parts))
 
-    logger.info("Collected PDF: compiling %d recipes", len(recipe_ids))
-    pdf_path = compile_tex(work_dir, tex_filename, timeout=900)
-    logger.info("Collected PDF: done, sending PDF")
+@app.get("/api/jobs/{job_id}/download")
+def download_job_pdf(job_id: str):
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if not job or job.get("status") != "done":
+            raise HTTPException(status_code=409, detail="Job is not finished yet.")
+        pdf_path = job["pdf_path"]
+        work_dir = job["work_dir"]
+
+    def cleanup():
+        shutil.rmtree(work_dir, ignore_errors=True)
+        with JOBS_LOCK:
+            JOBS.pop(job_id, None)
 
     return FileResponse(
         pdf_path,
         media_type="application/pdf",
         headers={"Content-Disposition": _content_disposition("Rezeptsammlung.pdf")},
-        background=BackgroundTask(shutil.rmtree, work_dir, ignore_errors=True),
+        background=BackgroundTask(cleanup),
     )

@@ -41,8 +41,9 @@ async function requestRecipePdf(backendUrl, host, token, recipeId) {
   return await response.blob();
 }
 
-async function requestAllRecipesPdf(backendUrl, host, token) {
-  const response = await fetch(`${backendUrl.replace(/\/$/, "")}/api/recipes/all`, {
+async function startAllRecipesJob(backendUrl, host, token) {
+  const base = backendUrl.replace(/\/$/, "");
+  const response = await fetch(`${base}/api/recipes/all/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ host, token }),
@@ -51,7 +52,62 @@ async function requestAllRecipesPdf(backendUrl, host, token) {
     const detail = await response.text();
     throw new Error(`Server-Fehler (${response.status}): ${detail.slice(-2000)}`);
   }
+  const { job_id: jobId } = await response.json();
+  return jobId;
+}
+
+async function getJobStatus(backendUrl, jobId) {
+  const base = backendUrl.replace(/\/$/, "");
+  const response = await fetch(`${base}/api/jobs/${jobId}`);
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Server-Fehler (${response.status}): ${detail.slice(-2000)}`);
+  }
+  return await response.json();
+}
+
+async function downloadJobPdf(backendUrl, jobId) {
+  const base = backendUrl.replace(/\/$/, "");
+  const response = await fetch(`${base}/api/jobs/${jobId}/download`);
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Server-Fehler (${response.status}): ${detail.slice(-2000)}`);
+  }
   return await response.blob();
+}
+
+function describeJobStatus(job) {
+  switch (job.status) {
+    case "queued":
+      return "In Warteschlange …";
+    case "fetching_list":
+      return "Lade Rezeptliste …";
+    case "fetching":
+      return `Lade Rezept ${job.current}/${job.total} …`;
+    case "compiling":
+      return `Kompiliere PDF (${job.total} Rezepte) …`;
+    case "done":
+      return "Fertig, lade PDF herunter …";
+    case "error":
+      return `Fehler: ${job.detail}`;
+    default:
+      return job.status;
+  }
+}
+
+async function requestAllRecipesPdf(backendUrl, host, token, onProgress) {
+  const jobId = await startAllRecipesJob(backendUrl, host, token);
+  for (;;) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const job = await getJobStatus(backendUrl, jobId);
+    if (onProgress) onProgress(job, describeJobStatus(job));
+    if (job.status === "done") {
+      return await downloadJobPdf(backendUrl, jobId);
+    }
+    if (job.status === "error") {
+      throw new Error(job.detail);
+    }
+  }
 }
 
 function triggerBlobDownload(blob, filename) {

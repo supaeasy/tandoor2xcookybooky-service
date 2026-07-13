@@ -15,9 +15,16 @@ async function init() {
     const button = document.getElementById("downloadAll");
     const status = document.getElementById("status");
     button.disabled = true;
-    status.textContent = "Erzeuge Sammel-PDF … das kann bei vielen Rezepten mehrere Minuten dauern.";
+    status.textContent = "Starte …";
     try {
-      const blob = await requestAllRecipesPdf(settings.backendUrl, settings.tandoorHost, settings.tandoorToken);
+      const blob = await requestAllRecipesPdf(
+        settings.backendUrl,
+        settings.tandoorHost,
+        settings.tandoorToken,
+        (job, text) => {
+          status.textContent = text;
+        }
+      );
       triggerBlobDownload(blob, "Rezeptsammlung.pdf");
       status.textContent = "Fertig!";
     } catch (err) {
