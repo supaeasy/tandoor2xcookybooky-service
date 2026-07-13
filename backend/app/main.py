@@ -1,6 +1,8 @@
+import logging
 import os
 import re
 import shutil
+import sys
 import tempfile
 from urllib.parse import quote
 
@@ -12,6 +14,9 @@ from starlette.background import BackgroundTask
 from . import render
 from .compiler import compile_tex
 from .tandoor_client import TandoorClient
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("tandoor2xcookybooky")
 
 app = FastAPI(title="Tandoor2xcookybooky-service")
 
@@ -63,6 +68,7 @@ def get_recipe_pdf(recipe_id: int, payload: dict = Body(...)):
     if not host or not token:
         raise HTTPException(status_code=400, detail="host and token are required.")
 
+    logger.info("Recipe %s: fetching from %s", recipe_id, host)
     client = TandoorClient(host, token)
     work_dir = tempfile.mkdtemp(prefix="tandoor_pdf_")
     pictures_dir = os.path.join(work_dir, "Pictures")
@@ -82,7 +88,9 @@ def get_recipe_pdf(recipe_id: int, payload: dict = Body(...)):
     with open(os.path.join(work_dir, tex_filename), "w", encoding="utf-8") as f:
         f.write("\n".join(tex_parts))
 
+    logger.info("Recipe %s (%s): compiling PDF", recipe_id, recipe_name)
     pdf_path = compile_tex(work_dir, tex_filename)
+    logger.info("Recipe %s (%s): done, sending PDF", recipe_id, recipe_name)
     download_name = f"{_sanitize_filename(recipe_name)}.pdf"
 
     return FileResponse(
@@ -100,10 +108,12 @@ def get_all_recipes_pdf(payload: dict = Body(...)):
     if not host or not token:
         raise HTTPException(status_code=400, detail="host and token are required.")
 
+    logger.info("Collected PDF: fetching recipe list from %s", host)
     client = TandoorClient(host, token)
     recipe_ids = client.fetch_all_recipe_ids()
     if not recipe_ids:
         raise HTTPException(status_code=404, detail="No recipes found on this Tandoor instance.")
+    logger.info("Collected PDF: %d recipes found", len(recipe_ids))
 
     work_dir = tempfile.mkdtemp(prefix="tandoor_book_")
     pictures_dir = os.path.join(work_dir, "Pictures")
@@ -115,7 +125,8 @@ def get_all_recipes_pdf(payload: dict = Body(...)):
         render.render_document_start(),
         "\\tableofcontents\n\\clearpage",
     ]
-    for recipe_id in recipe_ids:
+    for index, recipe_id in enumerate(recipe_ids, start=1):
+        logger.info("Collected PDF: fetching recipe %d/%d (id=%s)", index, len(recipe_ids), recipe_id)
         recipe = _prepare_recipe(client, recipe_id, work_dir, pictures_dir)
         tex_parts.append(render.render_recipe_fragment(recipe))
         tex_parts.append("\\clearpage")
@@ -125,7 +136,9 @@ def get_all_recipes_pdf(payload: dict = Body(...)):
     with open(os.path.join(work_dir, tex_filename), "w", encoding="utf-8") as f:
         f.write("\n".join(tex_parts))
 
+    logger.info("Collected PDF: compiling %d recipes", len(recipe_ids))
     pdf_path = compile_tex(work_dir, tex_filename, timeout=900)
+    logger.info("Collected PDF: done, sending PDF")
 
     return FileResponse(
         pdf_path,
