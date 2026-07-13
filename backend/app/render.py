@@ -16,14 +16,45 @@ _LATEX_SPECIAL_CHARS = {
     "~": r"\textasciitilde{}",
     "^": r"\textasciicircum{}",
 }
-_LATEX_SPECIAL_RE = re.compile("|".join(re.escape(k) for k in _LATEX_SPECIAL_CHARS))
+
+# Vulgar fraction characters (e.g. from copy-pasted recipe text) have no glyph
+# in the text fonts we use and make pdflatex abort with a fatal error - map
+# them to \nicefrac{}{} instead, consistent with how numeric fractions are
+# already rendered elsewhere.
+_UNICODE_FRACTIONS = {
+    "¼": (1, 4), "½": (1, 2), "¾": (3, 4),
+    "⅓": (1, 3), "⅔": (2, 3),
+    "⅕": (1, 5), "⅖": (2, 5), "⅗": (3, 5), "⅘": (4, 5),
+    "⅙": (1, 6), "⅚": (5, 6),
+    "⅐": (1, 7),
+    "⅛": (1, 8), "⅜": (3, 8), "⅝": (5, 8), "⅞": (7, 8),
+    "⅑": (1, 9),
+    "⅒": (1, 10),
+}
+
+_LATEX_ESCAPE_RE = re.compile(
+    "|".join(re.escape(k) for k in {**_LATEX_SPECIAL_CHARS, **_UNICODE_FRACTIONS})
+)
+
+
+def _latex_escape_one(match: re.Match) -> str:
+    ch = match.group()
+    if ch in _UNICODE_FRACTIONS:
+        num, den = _UNICODE_FRACTIONS[ch]
+        return f"\\nicefrac{{{num}}}{{{den}}}"
+    return _LATEX_SPECIAL_CHARS[ch]
 
 
 def latex_escape(value):
     if value is None:
         return ""
     value = str(value)
-    return _LATEX_SPECIAL_RE.sub(lambda m: _LATEX_SPECIAL_CHARS[m.group()], value)
+    value = _LATEX_ESCAPE_RE.sub(_latex_escape_one, value)
+    # Last-resort safety net: any other character our text fonts can't
+    # render (emoji, rare symbols, ...) would otherwise abort the whole
+    # compile - including everyone else's recipes in a collected PDF - so
+    # drop those instead of failing the entire document.
+    return "".join(ch for ch in value if ord(ch) < 0x2100)
 
 
 def decimal_to_nicefrac(value):
