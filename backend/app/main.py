@@ -125,7 +125,7 @@ def get_all_recipes_pdf(payload: dict = Body(...)):
     with open(os.path.join(work_dir, tex_filename), "w", encoding="utf-8") as f:
         f.write("\n".join(tex_parts))
 
-    pdf_path = compile_tex(work_dir, tex_filename)
+    pdf_path = compile_tex(work_dir, tex_filename, timeout=900)
 
     return FileResponse(
         pdf_path,

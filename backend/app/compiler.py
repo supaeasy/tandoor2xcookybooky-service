@@ -3,7 +3,7 @@ import subprocess
 from fastapi import HTTPException
 
 
-def compile_tex(work_dir: str, tex_filename: str) -> str:
+def compile_tex(work_dir: str, tex_filename: str, timeout: int = 180) -> str:
     """Compiles a .tex file with latexmk inside work_dir. Returns path to the resulting PDF."""
     try:
         result = subprocess.run(
@@ -16,8 +16,9 @@ def compile_tex(work_dir: str, tex_filename: str) -> str:
             ],
             cwd=work_dir,
             capture_output=True,
-            text=True,
-            timeout=180,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired as exc:
         raise HTTPException(status_code=500, detail="LaTeX compilation timed out.") from exc
