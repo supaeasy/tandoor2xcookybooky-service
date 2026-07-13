@@ -1,56 +1,43 @@
 // Injected (dynamically registered, see options.js) on the configured Tandoor
-// instance's /recipe/* pages. Adds a small PDF icon button right below the
-// recipe keywords, in the info panel next to the recipe image.
+// instance. Tandoor is a single-page app, so the top toolbar is the one
+// element that's always present and never re-rendered from scratch across
+// client-side navigation - we anchor there and just show/hide the button
+// depending on whether the current URL is a recipe page.
 
 (function () {
-  const RECIPE_ID_MATCH = window.location.pathname.match(/\/recipe\/(\d+)/);
-  if (!RECIPE_ID_MATCH) return;
-  const recipeId = RECIPE_ID_MATCH[1];
+  if (window.__tandoor2pdfInitialized) return;
+  window.__tandoor2pdfInitialized = true;
 
-  if (document.getElementById("tandoor2pdf-button")) return;
+  const ICON_CLASS = "fa-solid fa-file-pdf v-icon notranslate v-theme--dark v-icon--size-default fa-fw";
+  const SPINNER_CLASS = "fa-solid fa-spinner fa-spin v-icon notranslate v-theme--dark v-icon--size-default fa-fw";
 
-  function findReferenceIconButton() {
-    // Copy classes from Tandoor's own "..." menu icon button (v-btn--icon)
-    // so our button matches the current theme (light/dark) automatically.
-    return document.querySelector("button.v-btn--icon");
+  function currentRecipeId() {
+    const match = window.location.pathname.match(/\/recipe\/(\d+)/);
+    return match ? match[1] : null;
   }
 
-  function buildIconButton() {
-    const wrapper = document.createElement("span");
-    wrapper.id = "tandoor2pdf-wrapper";
-    wrapper.style.display = "inline-flex";
-    wrapper.style.alignItems = "center";
-    wrapper.style.gap = "6px";
-
+  function buildButton() {
     const button = document.createElement("button");
     button.id = "tandoor2pdf-button";
     button.type = "button";
-    button.title = "Als PDF herunterladen (xcookybooky)";
-
-    const reference = findReferenceIconButton();
-    if (reference) {
-      button.className = reference.className;
-    } else {
-      button.style.cssText =
-        "width:36px;height:36px;border-radius:50%;border:1px solid #888;background:transparent;cursor:pointer;";
-    }
+    button.title = "Aktuelles Rezept als PDF herunterladen (xcookybooky)";
+    button.className =
+      "v-btn v-btn--icon v-theme--dark v-btn--density-default v-btn--size-default v-btn--variant-text d-print-none";
+    button.style.marginRight = "4px";
 
     const icon = document.createElement("i");
-    icon.className = "fa-solid fa-file-pdf";
+    icon.className = ICON_CLASS;
     icon.setAttribute("aria-hidden", "true");
     button.appendChild(icon);
-
-    const status = document.createElement("span");
-    status.id = "tandoor2pdf-status";
-    status.style.fontSize = "0.8em";
-    status.style.opacity = "0.85";
 
     button.addEventListener("click", async (event) => {
       event.preventDefault();
       event.stopPropagation();
+      const recipeId = currentRecipeId();
+      if (!recipeId || button.disabled) return;
+
       button.disabled = true;
-      icon.className = "fa-solid fa-spinner fa-spin";
-      status.textContent = "Erzeuge PDF …";
+      icon.className = SPINNER_CLASS;
       try {
         const settings = await getSettings();
         if (!settings.tandoorHost || !settings.tandoorToken || !settings.backendUrl) {
@@ -64,85 +51,43 @@
         );
         const title = document.title.replace(/\s*[|·-]\s*Tandoor.*$/i, "").trim() || `rezept-${recipeId}`;
         triggerBlobDownload(blob, `${title}.pdf`);
-        status.textContent = "Fertig!";
       } catch (err) {
         console.error("Tandoor2xcookybooky:", err);
-        status.textContent = `Fehler: ${err.message}`;
+        alert(`PDF-Erzeugung fehlgeschlagen: ${err.message}`);
       } finally {
-        icon.className = "fa-solid fa-file-pdf";
+        icon.className = ICON_CLASS;
         button.disabled = false;
-        setTimeout(() => (status.textContent = ""), 8000);
       }
     });
 
-    wrapper.appendChild(button);
-    wrapper.appendChild(status);
-    return wrapper;
+    return button;
   }
 
-  function findKeywordsContainer() {
-    // The keywords render as plain <a class="v-chip" href="/advanced-search?keywords=..."> links
-    // inside a wrapping <div class="mt-4">. No more specific hook exists, so we
-    // anchor on that href pattern, which is stable regardless of theme/version.
-    const link = document.querySelector('a.v-chip[href*="/advanced-search?keywords="]');
-    if (link) {
-      return link.closest("div") || link.parentElement;
-    }
-    return null;
-  }
-
-  function findInfoPanel() {
-    // The right-hand info card (title, author, keywords, metrics) next to the image.
-    return document.querySelector(".v-card-text.flex-grow-1");
-  }
-
-  function insertButton() {
+  function ensureButtonInToolbar() {
     if (document.getElementById("tandoor2pdf-button")) return true;
 
-    const keywordsContainer = findKeywordsContainer();
-    if (keywordsContainer && keywordsContainer.parentNode) {
-      const wrapper = buildIconButton();
-      wrapper.style.display = "block";
-      wrapper.style.marginTop = "4px";
-      keywordsContainer.parentNode.insertBefore(wrapper, keywordsContainer.nextSibling);
-      return true;
-    }
+    const toolbar = document.querySelector(".v-toolbar__content");
+    if (!toolbar) return false;
 
-    // Recipe has no keywords (so the keywords div isn't rendered): fall back
-    // to appending inside the same info panel, still "next to the image".
-    const infoPanel = findInfoPanel();
-    if (infoPanel) {
-      const wrapper = buildIconButton();
-      wrapper.style.display = "block";
-      wrapper.style.marginTop = "8px";
-      infoPanel.appendChild(wrapper);
-      return true;
-    }
+    const searchButton = Array.from(toolbar.querySelectorAll("button")).find((b) =>
+      b.textContent.includes("Suchen")
+    );
 
-    return false;
+    const button = buildButton();
+    if (searchButton && searchButton.parentNode) {
+      searchButton.parentNode.insertBefore(button, searchButton);
+    } else {
+      toolbar.appendChild(button);
+    }
+    return true;
   }
 
-  if (insertButton()) return;
+  function tick() {
+    if (!ensureButtonInToolbar()) return;
+    const button = document.getElementById("tandoor2pdf-button");
+    button.style.display = currentRecipeId() ? "" : "none";
+  }
 
-  const observer = new MutationObserver(() => {
-    if (insertButton()) observer.disconnect();
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  // Last-resort fallback: if the expected layout isn't found at all after a
-  // while (very different Tandoor version), show a floating button so the
-  // feature still works instead of silently doing nothing.
-  setTimeout(() => {
-    if (document.getElementById("tandoor2pdf-button")) return;
-    observer.disconnect();
-    const wrapper = buildIconButton();
-    wrapper.style.position = "fixed";
-    wrapper.style.bottom = "20px";
-    wrapper.style.right = "20px";
-    wrapper.style.zIndex = "9999";
-    wrapper.style.background = "rgba(0,0,0,0.6)";
-    wrapper.style.padding = "6px 10px";
-    wrapper.style.borderRadius = "8px";
-    document.body.appendChild(wrapper);
-  }, 6000);
+  setInterval(tick, 500);
+  tick();
 })();
