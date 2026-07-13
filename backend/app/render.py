@@ -32,8 +32,28 @@ _UNICODE_FRACTIONS = {
     "⅒": (1, 10),
 }
 
+# Various invisible/exotic space characters (common in text copy-pasted from
+# Word or web pages) have no glyph in our text fonts either and crash
+# pdflatex just like the vulgar fractions did - normalize them to a plain
+# ASCII space (or drop the truly zero-width ones). Built from codepoints
+# rather than literal characters since these are invisible/indistinguishable
+# from each other in an editor.
+_SPACE_LIKE_CODEPOINTS = [
+    0x00A0,  # no-break space
+    0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005,  # en/em quad ... six-per-em space
+    0x2006, 0x2007, 0x2008, 0x2009, 0x200A,  # figure/punctuation/thin/hair space
+    0x202F,  # narrow no-break space
+    0x2028, 0x2029,  # line/paragraph separator
+]
+_ZERO_WIDTH_CODEPOINTS = [
+    0x200B,  # zero width space
+    0xFEFF,  # zero width no-break space / BOM
+]
+_WHITESPACE_LIKE = {chr(cp): " " for cp in _SPACE_LIKE_CODEPOINTS}
+_WHITESPACE_LIKE.update({chr(cp): "" for cp in _ZERO_WIDTH_CODEPOINTS})
+
 _LATEX_ESCAPE_RE = re.compile(
-    "|".join(re.escape(k) for k in {**_LATEX_SPECIAL_CHARS, **_UNICODE_FRACTIONS})
+    "|".join(re.escape(k) for k in {**_LATEX_SPECIAL_CHARS, **_UNICODE_FRACTIONS, **_WHITESPACE_LIKE})
 )
 
 
@@ -42,6 +62,8 @@ def _latex_escape_one(match: re.Match) -> str:
     if ch in _UNICODE_FRACTIONS:
         num, den = _UNICODE_FRACTIONS[ch]
         return f"\\nicefrac{{{num}}}{{{den}}}"
+    if ch in _WHITESPACE_LIKE:
+        return _WHITESPACE_LIKE[ch]
     return _LATEX_SPECIAL_CHARS[ch]
 
 
