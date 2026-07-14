@@ -1,17 +1,27 @@
+<<% if font_size_pt %>>{%
+% \ingredients{}/\preparation{} only *store* their content (via \def); it is
+% actually typeset later, at \end{recipe}. So changing the font size around
+% the \ingredients{}/\preparation{} calls themselves has no effect - instead
+% redefine the package's own font-size hooks for ingredients/preparation,
+% which stay in effect (this group doesn't close) until \end{recipe} runs.
+\makeatletter
+\renewcommand{\xcb@fontsize@ing}{\fontsize{<< font_size_pt >>}{<< font_size_pt * 1.2 >>}\selectfont}
+\renewcommand{\xcb@fontsize@prep}{\fontsize{<< font_size_pt >>}{<< font_size_pt * 1.2 >>}\selectfont}
+\makeatother
+<<% endif %>>
 \thispagestyle{xcbrecipe}
 \begin{recipe}[preparationtime = {\unit[<< recipe.working_time or 0 >>]{min}}, bakingtime={\unit[<< recipe.waiting_time or 0 >>]{min}}, portion = \portion{<< (recipe.servings or 1) | decimal_to_nicefrac >>\hspace{0.2em}}<<% if recipe.source_url %>>, source = \href{<< recipe.source_url >>}{<< recipe.source_domain | latex_escape >>}<<% endif %>>]{<< recipe.name | latex_escape >>}
 <<% if recipe.image_file %>>\graph{big=Pictures/<< recipe.image_file >>}<<% endif %>>
 
-<<% if font_size_pt %>>{\changefontsizes{<< font_size_pt >>pt}<<% endif %>>
 \ingredients[<< ingredient_count >>]{%
 <<% for step in recipe.steps %>><<% for ingredient in step.ingredients %>>\unit[<< ingredient.amount | decimal_to_nicefrac >>]<<% if ingredient.unit and ingredient.unit.name != "-" %>>{<<% if ingredient.amount > 1 and ingredient.unit.plural_name %>><< ingredient.unit.plural_name | latex_escape >><<% else %>><< ingredient.unit.name | latex_escape >><<% endif %>>}<<% endif %>> & <<% if ingredient.amount > 1 and ingredient.food.plural_name %>><< ingredient.food.plural_name | latex_escape >><<% else %>><< ingredient.food.name | latex_escape >><<% endif %>><<% if ingredient.note %>> {\textit{\footnotesize << ingredient.note | latex_escape >>}} <<% endif %>>\\
-<<% endfor %>><<% endfor %>>}<<% if font_size_pt %>>}<<% endif %>>
+<<% endfor %>><<% endfor %>>}
 
 <<% if recipe.description %>>\introduction{<< recipe.description | latex_escape | replace_celsius >>} <<% endif %>>
-<<% if font_size_pt %>>{\changefontsizes{<< font_size_pt >>pt}<<% endif %>>
 \preparation{%
 <<% for step in recipe.steps %>>\step{<< step.instruction | latex_escape | replace_celsius | replace_min_space>>}
-<<% endfor %>>}<<% if font_size_pt %>>}<<% endif %>>
+<<% endfor %>>}
 
 \hint{<<% if recipe.servings_text %>><< recipe.servings_text | latex_escape | replace_celsius | replace_min_space>><<% endif %>>}
 \end{recipe}
+<<% if font_size_pt %>>}<<% endif %>>
