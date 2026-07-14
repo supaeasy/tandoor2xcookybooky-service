@@ -151,5 +151,11 @@ def render_recipe_fragment(recipe: dict, font_size_pt: float | None = None) -> s
     wrapfigure-based layout cannot break a recipe across pages, so a too-long
     recipe would otherwise push its trailing \\hint box onto an otherwise
     empty extra page."""
+    # wrapfig (used internally by \ingredients for the wraptable) tries to
+    # auto-detect the table's height if not told explicitly, which its own
+    # documentation admits is unreliable for longer tables - passing the
+    # actual row count avoids that and the empty ingredients/preparation
+    # sections it caused for recipes with many ingredients/steps.
+    ingredient_count = sum(len(step.get("ingredients") or []) for step in recipe.get("steps") or [])
     template = _env.get_template("recipe_fragment.tex.j2")
-    return template.render(recipe=recipe, font_size_pt=font_size_pt)
+    return template.render(recipe=recipe, font_size_pt=font_size_pt, ingredient_count=max(ingredient_count, 1))

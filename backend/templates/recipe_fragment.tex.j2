@@ -3,7 +3,7 @@
 <<% if recipe.image_file %>>\graph{big=Pictures/<< recipe.image_file >>}<<% endif %>>
 
 <<% if font_size_pt %>>{\changefontsizes{<< font_size_pt >>pt}<<% endif %>>
-\ingredients{%
+\ingredients[<< ingredient_count >>]{%
 <<% for step in recipe.steps %>><<% for ingredient in step.ingredients %>>\unit[<< ingredient.amount | decimal_to_nicefrac >>]<<% if ingredient.unit and ingredient.unit.name != "-" %>>{<<% if ingredient.amount > 1 and ingredient.unit.plural_name %>><< ingredient.unit.plural_name | latex_escape >><<% else %>><< ingredient.unit.name | latex_escape >><<% endif %>>}<<% endif %>> & <<% if ingredient.amount > 1 and ingredient.food.plural_name %>><< ingredient.food.plural_name | latex_escape >><<% else %>><< ingredient.food.name | latex_escape >><<% endif %>><<% if ingredient.note %>> {\textit{\footnotesize << ingredient.note | latex_escape >>}} <<% endif %>>\\
 <<% endfor %>><<% endfor %>>}<<% if font_size_pt %>>}<<% endif %>>
 
