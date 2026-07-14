@@ -141,7 +141,7 @@ def render_document_end() -> str:
     return _env.get_template("document_end.tex.j2").render()
 
 
-def render_recipe_fragment(recipe: dict, font_size_pt: float | None = None) -> str:
+def render_recipe_fragment(recipe: dict, font_size_pt: float | None = None, show_page_number: bool = False) -> str:
     """Renders a recipe. If font_size_pt is given, the ingredients list and
     the preparation steps (and only those - not the picture, title, meta
     line, or introduction) are set at that font size via \\changefontsizes,
@@ -168,4 +168,9 @@ def render_recipe_fragment(recipe: dict, font_size_pt: float | None = None) -> s
         for ingredient in step.get("ingredients") or []
     )
     template = _env.get_template("recipe_fragment.tex.j2")
-    return template.render(recipe=recipe, font_size_pt=font_size_pt, ingredient_count=max(ingredient_count, 1))
+    return template.render(
+        recipe=recipe,
+        font_size_pt=font_size_pt,
+        ingredient_count=max(ingredient_count, 1),
+        show_page_number=show_page_number,
+    )

@@ -195,7 +195,7 @@ def _run_all_recipes_job(job_id: str, host: str, token: str) -> None:
                     "shrinking ingredients/preparation to %dpt",
                     job_id, recipe_id, font_size_pt,
                 )
-            tex_parts.append(render.render_recipe_fragment(recipe, font_size_pt))
+            tex_parts.append(render.render_recipe_fragment(recipe, font_size_pt, show_page_number=True))
             tex_parts.append("\\clearpage")
         tex_parts.append(render.render_document_end())
 
