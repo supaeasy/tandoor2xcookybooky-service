@@ -53,6 +53,11 @@ once it's done.
 - PDF layout/appearance (`xcookybooky.cfg`, `backend/templates/preamble.tex.j2`) can be tuned in the
   backend folder; rebuild the container after changes.
 
+## License
+
+[PolyForm Noncommercial License 1.0.0](LICENSE) — free to use and modify for noncommercial purposes;
+commercial use requires the copyright holder's permission.
+
 ---
 
 # Tandoor zu PDF (xcookybooky) — Deutsch
@@ -110,3 +115,8 @@ Download startet automatisch, sobald das PDF fertig ist.
   gedacht (CORS ist offen `*`). Nicht ungeschützt aus dem Internet erreichbar machen.
 - Layout/Aussehen der PDFs (`xcookybooky.cfg`, `backend/templates/preamble.tex.j2`) lassen sich im
   Backend-Ordner anpassen; nach Änderungen den Container neu bauen.
+
+## Lizenz
+
+[PolyForm Noncommercial License 1.0.0](LICENSE) — frei nutzbar und veränderbar für nicht-kommerzielle
+Zwecke; kommerzielle Nutzung erfordert die Erlaubnis des Rechteinhabers.
