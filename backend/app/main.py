@@ -58,6 +58,34 @@ def _prepare_recipe(client: TandoorClient, recipe_id: int, work_dir: str, pictur
     return recipe
 
 
+MAX_RELSIZE_STEPS = 4
+
+
+def _find_fitting_relsize_steps(work_dir: str, recipe: dict, recipe_id) -> int:
+    """xcookybooky can't break a recipe across pages (wrapfigure limitation),
+    so a too-long recipe would push its trailing hint box onto an otherwise
+    empty extra page. Test-compile the recipe standalone at shrinking sizes
+    (via relsize) until it fits on one page, or give up at MAX_RELSIZE_STEPS."""
+    recipe_name = recipe.get("name") or f"Recipe {recipe_id}"
+    for steps in range(0, MAX_RELSIZE_STEPS + 1):
+        tex_parts = [
+            render.render_preamble(BABEL_LANG, PDF_AUTHOR, recipe_name),
+            render.render_document_start(),
+            render.render_recipe_fragment_sized(recipe, steps),
+            render.render_document_end(),
+        ]
+        tex_filename = f"sizetest_{recipe_id}.tex"
+        with open(os.path.join(work_dir, tex_filename), "w", encoding="utf-8") as f:
+            f.write("\n".join(tex_parts))
+        try:
+            _, page_count = compile_tex(work_dir, tex_filename, timeout=60)
+        except HTTPException:
+            continue  # unlikely to be size-related, but don't let it kill the whole job
+        if page_count == 1:
+            return steps
+    return MAX_RELSIZE_STEPS
+
+
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
@@ -91,7 +119,7 @@ def get_recipe_pdf(recipe_id: int, payload: dict = Body(...)):
         f.write("\n".join(tex_parts))
 
     logger.info("Recipe %s (%s): compiling PDF", recipe_id, recipe_name)
-    pdf_path = compile_tex(work_dir, tex_filename)
+    pdf_path, _ = compile_tex(work_dir, tex_filename)
     logger.info("Recipe %s (%s): done, sending PDF", recipe_id, recipe_name)
     download_name = f"{_sanitize_filename(recipe_name)}.pdf"
 
@@ -141,7 +169,13 @@ def _run_all_recipes_job(job_id: str, host: str, token: str) -> None:
             logger.info("Job %s: fetching recipe %d/%d (id=%s)", job_id, index, len(recipe_ids), recipe_id)
             _set_job(job_id, current=index)
             recipe = _prepare_recipe(client, recipe_id, work_dir, pictures_dir)
-            tex_parts.append(render.render_recipe_fragment(recipe))
+            relsize_steps = _find_fitting_relsize_steps(work_dir, recipe, recipe_id)
+            if relsize_steps:
+                logger.info(
+                    "Job %s: recipe %s doesn't fit on one page at normal size, shrinking by %d step(s)",
+                    job_id, recipe_id, relsize_steps,
+                )
+            tex_parts.append(render.render_recipe_fragment_sized(recipe, relsize_steps))
             tex_parts.append("\\clearpage")
         tex_parts.append(render.render_document_end())
 
@@ -151,7 +185,7 @@ def _run_all_recipes_job(job_id: str, host: str, token: str) -> None:
 
         logger.info("Job %s: compiling %d recipes", job_id, len(recipe_ids))
         _set_job(job_id, status="compiling")
-        pdf_path = compile_tex(work_dir, tex_filename, timeout=900)
+        pdf_path, _ = compile_tex(work_dir, tex_filename, timeout=900)
         logger.info("Job %s: done", job_id)
         _set_job(job_id, status="done", pdf_path=pdf_path, work_dir=work_dir)
     except HTTPException as exc:

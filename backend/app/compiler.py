@@ -1,10 +1,17 @@
+import re
 import subprocess
 
 from fastapi import HTTPException
 
+_PAGE_COUNT_RE = re.compile(r"Output written on \S+\.pdf \((\d+) pages?")
 
-def compile_tex(work_dir: str, tex_filename: str, timeout: int = 180) -> str:
-    """Compiles a .tex file with latexmk inside work_dir. Returns path to the resulting PDF."""
+
+def compile_tex(work_dir: str, tex_filename: str, timeout: int = 180) -> tuple[str, int | None]:
+    """Compiles a .tex file with latexmk inside work_dir.
+
+    Returns (path to the resulting PDF, page count if it could be parsed from
+    the log, else None).
+    """
     try:
         result = subprocess.run(
             [
@@ -30,4 +37,7 @@ def compile_tex(work_dir: str, tex_filename: str, timeout: int = 180) -> str:
             status_code=500,
             detail=f"LaTeX compilation failed. Last log lines:\n{log_tail}",
         )
-    return f"{work_dir}/{pdf_name}"
+
+    match = _PAGE_COUNT_RE.search(result.stdout)
+    page_count = int(match.group(1)) if match else None
+    return f"{work_dir}/{pdf_name}", page_count
