@@ -141,18 +141,15 @@ def render_document_end() -> str:
     return _env.get_template("document_end.tex.j2").render()
 
 
-def render_recipe_fragment(recipe: dict) -> str:
+def render_recipe_fragment(recipe: dict, font_size_pt: float | None = None) -> str:
+    """Renders a recipe. If font_size_pt is given, the ingredients list and
+    the preparation steps (and only those - not the picture, title, meta
+    line, or introduction) are set at that font size via \\changefontsizes,
+    which - unlike relsize - actually recomputes \\Large/\\Huge/\\small etc.
+    for that scope instead of just changing the current point size. This is
+    used to shrink recipes that don't fit on a single page: xcookybooky's
+    wrapfigure-based layout cannot break a recipe across pages, so a too-long
+    recipe would otherwise push its trailing \\hint box onto an otherwise
+    empty extra page."""
     template = _env.get_template("recipe_fragment.tex.j2")
-    return template.render(recipe=recipe)
-
-
-def render_recipe_fragment_sized(recipe: dict, relsize_steps: int = 0) -> str:
-    """Same as render_recipe_fragment, optionally shrunk by N steps on LaTeX's
-    standard size scale (via the relsize package) so long recipes can be made
-    to fit on a single page - xcookybooky's wrapfigure-based layout cannot
-    break a recipe across pages, so a too-long recipe would otherwise push
-    its trailing \\hint box onto an otherwise empty extra page."""
-    fragment = render_recipe_fragment(recipe)
-    if relsize_steps <= 0:
-        return fragment
-    return f"{{\\relsize{{-{relsize_steps}}}\n{fragment}\n}}"
+    return template.render(recipe=recipe, font_size_pt=font_size_pt)

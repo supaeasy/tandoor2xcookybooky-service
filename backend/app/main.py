@@ -58,20 +58,23 @@ def _prepare_recipe(client: TandoorClient, recipe_id: int, work_dir: str, pictur
     return recipe
 
 
-MAX_RELSIZE_STEPS = 6
+MIN_FONT_SIZE_PT = 6
 
 
-def _find_fitting_relsize_steps(work_dir: str, recipe: dict, recipe_id) -> int:
+def _find_fitting_font_size(work_dir: str, recipe: dict, recipe_id) -> float | None:
     """xcookybooky can't break a recipe across pages (wrapfigure limitation),
     so a too-long recipe would push its trailing hint box onto an otherwise
-    empty extra page. Test-compile the recipe standalone at shrinking sizes
-    (via relsize) until it fits on one page, or give up at MAX_RELSIZE_STEPS."""
+    empty extra page. Test-compile the recipe standalone, first at the normal
+    size, then - only if that doesn't fit - with the ingredients/preparation
+    text shrunk 1pt at a time (via \\changefontsizes) until it fits on one
+    page or MIN_FONT_SIZE_PT is reached."""
     recipe_name = recipe.get("name") or f"Recipe {recipe_id}"
-    for steps in range(0, MAX_RELSIZE_STEPS + 1):
+
+    def compiles_on_one_page(font_size_pt):
         tex_parts = [
             render.render_preamble(BABEL_LANG, PDF_AUTHOR, recipe_name),
             render.render_document_start(),
-            render.render_recipe_fragment_sized(recipe, steps),
+            render.render_recipe_fragment(recipe, font_size_pt),
             render.render_document_end(),
         ]
         tex_filename = f"sizetest_{recipe_id}.tex"
@@ -80,11 +83,19 @@ def _find_fitting_relsize_steps(work_dir: str, recipe: dict, recipe_id) -> int:
         try:
             _, page_count = compile_tex(work_dir, tex_filename, timeout=60)
         except HTTPException:
-            continue  # unlikely to be size-related, but don't let it kill the whole job
-        logger.info("Recipe %s: relsize steps=%d -> %s page(s)", recipe_id, steps, page_count)
-        if page_count == 1:
-            return steps
-    return MAX_RELSIZE_STEPS
+            return False  # unlikely to be size-related, but don't let it kill the whole job
+        logger.info("Recipe %s: font_size=%s -> %s page(s)", recipe_id, font_size_pt or "default", page_count)
+        return page_count == 1
+
+    if compiles_on_one_page(None):
+        return None
+
+    font_size_pt = 10
+    while font_size_pt >= MIN_FONT_SIZE_PT:
+        if compiles_on_one_page(font_size_pt):
+            return font_size_pt
+        font_size_pt -= 1
+    return MIN_FONT_SIZE_PT
 
 
 @app.get("/healthz")
@@ -170,13 +181,14 @@ def _run_all_recipes_job(job_id: str, host: str, token: str) -> None:
             logger.info("Job %s: fetching recipe %d/%d (id=%s)", job_id, index, len(recipe_ids), recipe_id)
             _set_job(job_id, current=index)
             recipe = _prepare_recipe(client, recipe_id, work_dir, pictures_dir)
-            relsize_steps = _find_fitting_relsize_steps(work_dir, recipe, recipe_id)
-            if relsize_steps:
+            font_size_pt = _find_fitting_font_size(work_dir, recipe, recipe_id)
+            if font_size_pt:
                 logger.info(
-                    "Job %s: recipe %s doesn't fit on one page at normal size, shrinking by %d step(s)",
-                    job_id, recipe_id, relsize_steps,
+                    "Job %s: recipe %s doesn't fit on one page at normal size, "
+                    "shrinking ingredients/preparation to %dpt",
+                    job_id, recipe_id, font_size_pt,
                 )
-            tex_parts.append(render.render_recipe_fragment_sized(recipe, relsize_steps))
+            tex_parts.append(render.render_recipe_fragment(recipe, font_size_pt))
             tex_parts.append("\\clearpage")
         tex_parts.append(render.render_document_end())
 
