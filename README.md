@@ -9,6 +9,13 @@ Since browsers can't run Python or LaTeX themselves, a small Docker container (m
 e.g. via Portainer) fetches recipes through the Tandoor API and compiles the PDF. The backend itself
 holds no credentials — the Tandoor host and API token are sent by the browser with every request.
 
+## About
+
+This is an unofficial, third-party companion tool for [Tandoor Recipes](https://github.com/TandoorRecipes/recipes),
+the excellent self-hosted recipe manager this whole project is built around. It is not affiliated with,
+endorsed by, or officially connected to the Tandoor Recipes project in any way — it simply talks to a
+running Tandoor instance through its public API to turn your own recipes into printable PDFs.
+
 ## 1. Start the backend container (NAS / Portainer)
 
 1. Copy the `backend/` folder to your NAS (or point Portainer directly at this git repo).
@@ -71,6 +78,14 @@ Da Browser weder Python noch LaTeX ausführen können, übernimmt ein kleiner Do
 zum Betrieb auf deinem NAS, z.B. via Portainer) das Abrufen der Rezepte über die Tandoor-API und die
 Kompilierung zu PDF. Die Erweiterung selbst enthält keine Zugangsdaten-Logik am Server – Host und Token
 werden bei jeder Anfrage vom Browser mitgeschickt.
+
+## Über dieses Projekt
+
+Dies ist ein inoffizielles Zusatz-Tool für [Tandoor Recipes](https://github.com/TandoorRecipes/recipes),
+den hervorragenden selbst gehosteten Rezeptmanager, um den dieses gesamte Projekt herum gebaut ist. Es
+steht in keiner Verbindung zum offiziellen Tandoor-Recipes-Projekt, wird nicht von ihm unterstützt oder
+autorisiert – es kommuniziert lediglich über dessen öffentliche API mit einer laufenden Tandoor-Instanz,
+um eigene Rezepte in druckbare PDFs zu verwandeln.
 
 ## 1. Backend-Container starten (NAS / Portainer)
 
