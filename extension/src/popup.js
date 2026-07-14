@@ -5,6 +5,7 @@ function renderState(state) {
   const button = document.getElementById("downloadAll");
   const status = document.getElementById("status");
   status.textContent = state?.text || "";
+  status.className = state?.status === "error" ? "error" : state?.status === "finished" ? "success" : "";
   button.disabled = !IDLE_STATUSES.has(state?.status);
 }
 

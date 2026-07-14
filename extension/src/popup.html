@@ -3,25 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <title>Tandoor zu PDF</title>
+    <link rel="stylesheet" href="theme.css" />
     <style>
-      body { font-family: system-ui, sans-serif; width: 280px; padding: 12px; }
-      h3 { margin: 0 0 10px; font-size: 1em; }
-      button { width: 100%; padding: 8px; cursor: pointer; margin-bottom: 8px; }
-      #status { font-size: 0.85em; color: #444; min-height: 1.2em; }
-      #configHint { font-size: 0.85em; color: #b00; }
-      a { color: #06c; cursor: pointer; }
+      body { width: 300px; }
     </style>
   </head>
   <body>
-    <h3>Tandoor zu PDF</h3>
-    <div id="unconfigured" style="display:none">
-      <p id="configHint">Bitte zuerst <a id="openOptions">Einstellungen</a> ausfüllen.</p>
+    <div class="tandoor-header">
+      <img src="../icons/icon32.png" alt="" />
+      <h1>Tandoor zu PDF</h1>
     </div>
-    <div id="configured" style="display:none">
-      <button id="downloadAll">📚 Alle Rezepte als PDF</button>
-      <div id="status"></div>
-      <p style="font-size:0.75em;color:#888;">Dieses Fenster w&auml;hrenddessen bitte ge&ouml;ffnet lassen.</p>
-      <p><a id="openOptions2">Einstellungen ändern</a></p>
+    <div class="tandoor-body">
+      <div id="unconfigured" style="display:none">
+        <p class="hint">Bitte zuerst <a id="openOptions">Einstellungen</a> ausfüllen.</p>
+      </div>
+      <div id="configured" style="display:none">
+        <div class="tandoor-card">
+          <button class="tandoor-btn" id="downloadAll">📚 Alle Rezepte als PDF</button>
+          <div id="status"></div>
+          <p class="hint">Dieses Fenster währenddessen bitte geöffnet lassen.</p>
+        </div>
+        <p class="hint" style="margin-top:12px;"><a id="openOptions2">Einstellungen ändern</a></p>
+      </div>
     </div>
 
     <script src="settings.js"></script>

@@ -3,32 +3,38 @@
   <head>
     <meta charset="utf-8" />
     <title>Tandoor zu PDF – Einstellungen</title>
+    <link rel="stylesheet" href="theme.css" />
     <style>
-      body { font-family: system-ui, sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; }
-      label { display: block; margin-top: 14px; font-weight: 600; }
-      input { width: 100%; padding: 6px 8px; margin-top: 4px; box-sizing: border-box; }
-      button { margin-top: 18px; padding: 8px 16px; cursor: pointer; }
-      p.hint { color: #666; font-size: 0.85em; margin: 4px 0 0; }
-      #status { margin-top: 12px; font-size: 0.9em; }
+      body { display: flex; justify-content: center; min-height: 100vh; }
+      .page { width: 100%; max-width: 480px; }
+      .hint { margin: 4px 0 0; }
     </style>
   </head>
   <body>
-    <h2>Tandoor zu PDF – Einstellungen</h2>
+    <div class="page">
+      <div class="tandoor-header">
+        <img src="../icons/icon32.png" alt="" />
+        <h1>Einstellungen</h1>
+      </div>
+      <div class="tandoor-body">
+        <div class="tandoor-card">
+          <label for="tandoorHost">Tandoor-Instanz-URL</label>
+          <input id="tandoorHost" type="url" placeholder="https://tandoor.meine-domain.de" />
+          <p class="hint">Die Adresse, unter der du dein Tandoor im Browser aufrufst.</p>
 
-    <label for="tandoorHost">Tandoor-Instanz-URL</label>
-    <input id="tandoorHost" type="url" placeholder="https://tandoor.meine-domain.de" />
-    <p class="hint">Die Adresse, unter der du dein Tandoor im Browser aufrufst.</p>
+          <label for="tandoorToken">API-Token</label>
+          <input id="tandoorToken" type="password" placeholder="tda_..." />
+          <p class="hint">Erstellbar unter [Tandoor-URL]/api/access-token/ mit Scope "read".</p>
 
-    <label for="tandoorToken">API-Token</label>
-    <input id="tandoorToken" type="password" placeholder="tda_..." />
-    <p class="hint">Erstellbar unter [Tandoor-URL]/api/access-token/ mit Scope "read".</p>
+          <label for="backendUrl">Backend-Server-URL (Docker-Container)</label>
+          <input id="backendUrl" type="url" placeholder="http://192.168.1.50:8123" />
+          <p class="hint">Adresse deines Tandoor2xcookybooky-Docker-Containers (z.B. auf dem NAS).</p>
 
-    <label for="backendUrl">Backend-Server-URL (Docker-Container)</label>
-    <input id="backendUrl" type="url" placeholder="http://192.168.1.50:8123" />
-    <p class="hint">Adresse deines Tandoor2xcookybooky-Docker-Containers (z.B. auf dem NAS).</p>
-
-    <button id="save">Speichern</button>
-    <div id="status"></div>
+          <button class="tandoor-btn" id="save">💾 Speichern</button>
+          <div id="status"></div>
+        </div>
+      </div>
+    </div>
 
     <script src="settings.js"></script>
     <script src="options.js"></script>
