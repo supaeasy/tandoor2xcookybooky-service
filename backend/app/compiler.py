@@ -38,6 +38,10 @@ def compile_tex(work_dir: str, tex_filename: str, timeout: int = 180) -> tuple[s
             detail=f"LaTeX compilation failed. Last log lines:\n{log_tail}",
         )
 
-    match = _PAGE_COUNT_RE.search(result.stdout)
-    page_count = int(match.group(1)) if match else None
+    # latexmk reruns pdflatex multiple times when hyperref/references need it
+    # (e.g. "Rerun to get outlines right"), and each run prints its own
+    # "Output written on ..." line - take the LAST one, which reflects the
+    # final, settled page count, not an earlier intermediate pass.
+    matches = _PAGE_COUNT_RE.findall(result.stdout)
+    page_count = int(matches[-1]) if matches else None
     return f"{work_dir}/{pdf_name}", page_count

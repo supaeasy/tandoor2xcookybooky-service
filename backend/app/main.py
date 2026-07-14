@@ -58,7 +58,7 @@ def _prepare_recipe(client: TandoorClient, recipe_id: int, work_dir: str, pictur
     return recipe
 
 
-MAX_RELSIZE_STEPS = 4
+MAX_RELSIZE_STEPS = 6
 
 
 def _find_fitting_relsize_steps(work_dir: str, recipe: dict, recipe_id) -> int:
@@ -81,6 +81,7 @@ def _find_fitting_relsize_steps(work_dir: str, recipe: dict, recipe_id) -> int:
             _, page_count = compile_tex(work_dir, tex_filename, timeout=60)
         except HTTPException:
             continue  # unlikely to be size-related, but don't let it kill the whole job
+        logger.info("Recipe %s: relsize steps=%d -> %s page(s)", recipe_id, steps, page_count)
         if page_count == 1:
             return steps
     return MAX_RELSIZE_STEPS

@@ -7,6 +7,11 @@
 \usepackage{nicefrac}
 \usepackage{relsize}
 \usepackage[nowarnings,myconfig]{xcookybooky}
+% xcookybooky sets \fancyhead[R]{\rightmark} (repeating the recipe name in
+% the top-right corner) - drop it since the name is already the big heading
+% on the page; keep the footer (page number) as-is.
+\fancyhead[R]{}
+\fancyhead[LE,RO]{}
 \DeclareRobustCommand{\textcelcius}{\ensuremath{^{\circ}\mathrm{C}}\hspace{0.3em}}
 \setcounter{secnumdepth}{1}
 \renewcommand*{\recipesection}[2][]{\subsection[#1]{#2}}
@@ -27,7 +32,10 @@ citecolor={black},
 filecolor={black}
 }
 \hbadness=10000
-\setlength{\headsep}{0.5cm}
+% Extra clearance vs. the original single-recipe template's values, so the
+% recipe picture (which xcookybooky nudges up by \vspace{-0.6cm} internally)
+% no longer overlaps the header rule.
+\setlength{\headsep}{1cm}
 \setlength{\footskip}{14pt}
-\setlength{\topmargin}{-1cm} \setlength{\textheight}{25.5cm}
+\setlength{\topmargin}{-0.4cm} \setlength{\textheight}{24.4cm}
 \renewcommand{\step}{\stepcounter{step}\lettrine[lines=2,lhang=0,loversize=0.15,slope=0em,findent=1em,nindent=0em]{\thestep}{}}
