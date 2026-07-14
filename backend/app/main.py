@@ -120,10 +120,17 @@ def get_recipe_pdf(recipe_id: int, payload: dict = Body(...)):
     recipe = _prepare_recipe(client, recipe_id, work_dir, pictures_dir)
     recipe_name = recipe.get("name") or f"Recipe {recipe_id}"
 
+    font_size_pt = _find_fitting_font_size(work_dir, recipe, recipe_id)
+    if font_size_pt:
+        logger.info(
+            "Recipe %s doesn't fit on one page at normal size, shrinking ingredients/preparation to %dpt",
+            recipe_id, font_size_pt,
+        )
+
     tex_parts = [
         render.render_preamble(BABEL_LANG, PDF_AUTHOR, recipe_name),
         render.render_document_start(),
-        render.render_recipe_fragment(recipe),
+        render.render_recipe_fragment(recipe, font_size_pt),
         render.render_document_end(),
     ]
     tex_filename = "recipe.tex"

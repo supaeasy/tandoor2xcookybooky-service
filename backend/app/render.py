@@ -153,9 +153,17 @@ def render_recipe_fragment(recipe: dict, font_size_pt: float | None = None) -> s
     empty extra page."""
     # wrapfig (used internally by \ingredients for the wraptable) tries to
     # auto-detect the table's height if not told explicitly, which its own
-    # documentation admits is unreliable for longer tables - passing the
-    # actual row count avoids that and the empty ingredients/preparation
-    # sections it caused for recipes with many ingredients/steps.
-    ingredient_count = sum(len(step.get("ingredients") or []) for step in recipe.get("steps") or [])
+    # documentation admits is unreliable for longer tables - passing an
+    # explicit row count avoids that. A plain per-ingredient count under-
+    # estimates it though: an ingredient note wraps onto 2-3 lines in the
+    # narrow ingredients column (e.g. "Oberschale in / Scheiben zu 180g"),
+    # so reserve extra lines for those rather than just counting rows -
+    # underestimating causes the preparation text to bleed straight through
+    # the still-continuing ingredients table.
+    ingredient_count = sum(
+        3 if ingredient.get("note") else 1
+        for step in recipe.get("steps") or []
+        for ingredient in step.get("ingredients") or []
+    )
     template = _env.get_template("recipe_fragment.tex.j2")
     return template.render(recipe=recipe, font_size_pt=font_size_pt, ingredient_count=max(ingredient_count, 1))
